@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Living Portfolio — v2 (Bloomberg×Finviz)</title>
+<style>
+:root { --bg:#0b1220; --panel:#0f172a; --text:#e2e8f0; --muted:#93a4bb; --line:#0b2540; --chip:#0b2136; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+.wrapper{max-width:1280px;margin:auto;padding:14px}
+.topbar{position:sticky;top:0;background:linear-gradient(180deg, rgba(11,18,32,.98), rgba(11,18,32,.88));backdrop-filter:blur(6px);z-index:5;border-bottom:1px solid var(--line);padding:10px 0}
+.topgrid{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+.h1{font-weight:700;font-size:18px}
+.sub{font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-size:12px}
+.pill.ok{color:#7dd3fc;border-color:#0ea5e9}
+.pill.bad{color:var(--bad);border-color:var(--bad)}
+.search{display:flex;gap:8px}
+input[type="search"]{width:260px;max-width:100%;background:#0b1b2c;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:10px}
+button{background:#0b1b2c;border:1px solid #1b3a5a;color:#c7e1ff;border-radius:10px;padding:8px 10px;cursor:pointer}
+button:hover{background:#0a1930}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);font-size:12px;cursor:pointer}
+.chip.active{border-color:#0ea5e9;box-shadow:0 0 0 1px #0ea5e9 inset}
+.grid{display:grid;gap:10px;margin-top:12px}
+@media(min-width:980px){.grid{grid-template-columns:1.2fr .9fr .9fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px}
+.h2{font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:#c7d2fe;margin:0 0 8px}
+.group{border:1px dashed var(--line);border-radius:12px;padding:8px;margin-bottom:8px}
+.group h3{margin:0 0 6px;font-size:13px;color:#a5b4fc}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+.table th{color:#a5b4fc;font-weight:600}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#0b1b2c;border:1px solid #1b3a5a;color:#7dd3fc;font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;margin-right:4px;border:1px solid transparent}
+.tag.g{background:rgba(34,197,94,.15);color:#34d399;border-color:rgba(34,197,94,.35)}
+.tag.y{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(245,158,11,.35)}
+.tag.r{background:rgba(239,68,68,.15);color:#f87171;border-color:rgba(239,68,68,.35)}
+.small{font-size:11px;color:var(--muted)}
+.timeline{display:grid;gap:6px;max-height:460px;overflow:auto}
+.item{display:flex;gap:8px;align-items:center;background:#0b1b2c;border:1px solid #1b3a5a;border-radius:10px;padding:8px}
+.heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+.tile{background:#0b1b2c;border:1px solid #1b3a5a;border-radius:10px;padding:6px}
+.tile b{display:block}
+.footer{margin-top:12px;color:var(--muted);font-size:11px}
+hr{border:0;border-top:1px solid var(--line);margin:8px 0}
+.hide{display:none}
+.link{color:#93c5fd;text-decoration:none;border-bottom:1px dashed #224; }
+.link:hover{color:#bfdbfe;border-bottom-color:#446;}
+</style>
+</head>
+<body>
+<!-- endpoints (edit if your files are in a subfolder) -->
+<script>
+  window.LPE_DATA_ENDPOINT      = "https://drealmaestro.github.io/living-portfolio/live.json";
+  window.LPE_IR_VERIFY_ENDPOINT = "https://drealmaestro.github.io/living-portfolio/ir-verify.json";
+</script>
+
+<div class="topbar">
+  <div class="wrapper topgrid">
+    <div>
+      <div class="h1">⚡ Living Portfolio — v2 (Bloomberg×Finviz)</div>
+      <div class="sub">As of <span id="asof">—</span> · Status <span id="status" class="pill">Loading…</span></div>
+    </div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search ticker or text…"/>
+      <button id="refresh">Refresh</button>
+    </div>
+    <div class="pill" id="latency">Net: —</div>
+  </div>
+  <div class="wrapper toolbar">
+    <div class="chip active" data-filter="all">All</div>
+    <div class="chip" data-filter="core">Core</div>
+    <div class="chip" data-filter="swing">Swing</div>
+    <div class="chip" data-filter="spec">Spec</div>
+    <div class="chip" data-filter="events">Catalysts</div>
+  </div>
+</div>
+
+<div class="wrapper">
+  <div class="grid">
+    <div class="card" id="corePane">
+      <div class="h2">Core Portfolio (sector grouped)</div>
+      <div id="coreGroups"></div>
+    </div>
+
+    <div class="card" id="tacticalPane">
+      <div class="h2">Swing (3–6M) & Spec (Graduation Watch)</div>
+      <table class="table" id="swTable">
+        <thead><tr><th>Ticker</th><th>Sleeve</th><th>Weight</th><th>Signal</th><th>Q</th><th>Notes</th><th>Exit</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <hr/>
+      <div class="h2">Heatmap (by sector)</div>
+      <div class="heat" id="heatmap"></div>
+    </div>
+
+    <div class="card" id="catalystPane">
+      <div class="h2">Catalyst Timeline (next 90d)</div>
+      <div class="timeline" id="timeline"></div>
+      <div class="small" id="verifyStatus">IR Verifier: —</div>
+      <hr/>
+      <div class="h2">New Shining Things</div>
+      <div id="nst" class="small">First-mention tickers in last 90d with positive catalysts</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    v2: faster, cleaner, mobile-friendly. Uses your <code>live.json</code> + <code>ir-verify.json</code>. © el maestro
+  </div>
+</div>
+
+<script>
+(() => {
+  const DATA = window.LPE_DATA_ENDPOINT;
+  const IR   = window.LPE_IR_VERIFY_ENDPOINT;
+  const $ = s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+  const pad = n=>String(n).padStart(2,'0');
+  const now = ()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+  const asPct = v=>{if(v==null) return 0; const s=String(v).trim(); return s.endsWith('%')?parseFloat(s):parseFloat(s)||0};
+  const groupBy=(arr,kf)=>arr.reduce((m,x)=>{const k=kf(x);(m[k]||(m[k]=[])).push(x);return m;},{});  
+  const state={core:[],swing:[],spec:[],cats:{company:[],macro:[]},ir:[]};
+
+  function setStatus(){
+    const tech = state.core.filter(x=>String(x.sector||'').toLowerCase().includes('tech')).reduce((s,x)=>s+asPct(x.weight),0);
+    const spec = state.spec.reduce((s,x)=>s+asPct(x.weight),0);
+    const ok = tech<=30 && spec<=5;
+    const pill=$('#status'); pill.textContent = ok? '🟢 Compliant' : '🔴 Breach'; pill.className='pill '+(ok?'ok':'bad');
+    $('#asof').textContent = now();
+  }
+
+  function renderCore(){
+    const host = $('#coreGroups'); host.innerHTML='';
+    const groups = groupBy(state.core, x=>x.sector||'Other');
+    Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([sec,rows])=>{
+      const box=document.createElement('div'); box.className='group';
+      box.innerHTML = `<h3>${sec}</h3>
+        <table class="table">
+          <thead><tr><th>Ticker</th><th>Weight</th><th>Badge</th><th>Q</th><th>Thesis / Notes</th><th>Exit</th></tr></thead>
+          <tbody></tbody>
+        </table>`;
+      const tb = box.querySelector('tbody');
+      tb.innerHTML = rows.map(r=>`
+        <tr>
+          <td><span class="badge">${r.ticker}</span></td>
+          <td>${r.weight||''}</td>
+          <td>${r.badge||''}</td>
+          <td>${r.q!=null?`<span class="tag ${r.q>=9?'g':r.q>=6?'y':'r'}">Q ${r.q}</span>`:''}</td>
+          <td>${r.notes||''} ${r.source_url?`<a class="link" href="${r.source_url}" target="_blank" rel="noopener">source</a>`:''}</td>
+          <td class="small">${r.exits||''}</td>
+        </tr>`).join('');
+      host.appendChild(box);
+    });
+  }
+
+  function renderTactical(){
+    const tb=$('#swTable tbody');
+    const rows=[...state.swing.map(x=>({...x,sleeve:'Swing'})),...state.spec.map(x=>({...x,sleeve:'Spec'}))];
+    tb.innerHTML = rows.map(r=>`
+      <tr>
+        <td><span class="badge">${r.ticker}</span></td>
+        <td>${r.sleeve}</td>
+        <td>${r.weight||''}</td>
+        <td>${r.signal||''}</td>
+        <td>${r.q!=null?`<span class="tag ${r.q>=9?'g':r.q>=6?'y':'r'}">${r.q}</span>`:''}</td>
+        <td>${r.notes||''} ${r.source_url?`<a class="link" href="${r.source_url}" target="_blank" rel="noopener">source</a>`:''}</td>
+        <td class="small">${r.exits||''}</td>
+      </tr>`).join('');
+    renderHeatmap();
+  }
+
+  function renderHeatmap(){
+    const hm=$('#heatmap'); hm.innerHTML='';
+    const g=groupBy(state.core,x=>x.sector||'Other');
+    Object.entries(g).forEach(([sec,rows])=>{
+      const w=rows.reduce((s,x)=>s+asPct(x.weight),0).toFixed(1);
+      const div=document.createElement('div'); div.className='tile';
+      div.innerHTML=`<b>${sec}</b><span class="small">Weight ${w}%</span>`;
+      hm.appendChild(div);
+    });
+  }
+
+  function renderTimeline(){
+    const list = [];
+    (state.cats.company||[]).forEach(x=>list.push({date:x.date,label:`${x.ticker} — ${x.label}`,color:x.color||'y',impact:x.impact||'Med'}));
+    (state.cats.macro||[]).forEach(x=>list.push({date:x.date||x.label,label:x.label,color:x.color||'y',impact:x.impact||'Med'}));
+    list.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const host=$('#timeline'); host.innerHTML=list.map(x=>
+      `<div class="item"><span class="tag ${x.color}">${x.date||''}</span><div>${x.label}</div><span class="tag ${x.impact==='High'?'g':x.impact==='Med'?'y':'r'}">${x.impact}</span></div>`
+    ).join('');
+  }
+
+  function applyFilter(kind){
+    ['#corePane','#tacticalPane','#catalystPane'].forEach(s=>$(s).classList.remove('hide'));
+    $$('.chip').forEach(c=>c.classList.remove('active')); $(`.chip[data-filter="${kind}"]`)?.classList.add('active');
+    if(kind==='core'){ $('#tacticalPane').classList.add('hide'); $('#catalystPane').classList.add('hide'); }
+    if(kind==='swing'){ $('#corePane').classList.add('hide'); $('#catalystPane').classList.add('hide'); }
+    if(kind==='spec'){ $('#corePane').classList.add('hide'); $('#catalystPane').classList.add('hide');
+      $$('#swTable tbody tr').forEach(tr=>{ tr.style.display = (tr.children[1].textContent==='Spec')?'' : 'none'; }); return; }
+    if(kind==='events'){ $('#corePane').classList.add('hide'); $('#tacticalPane').classList.add('hide'); }
+    $$('#swTable tbody tr').forEach(tr=>tr.style.display='');
+  }
+
+  function searchAll(q){
+    q=q.trim().toUpperCase();
+    const match=(el)=> (el.textContent||'').toUpperCase().includes(q);
+    ['#coreGroups','#swTable','#timeline'].forEach(sel=>{
+      $$(sel+' *').forEach(n=>{
+        if(n.tagName==='TR'||n.classList.contains('item')){
+          n.style.display = q? (match(n)?'':'none') : '';
+        }
+      });
+    });
+  }
+
+  async function load(){
+    const t0=performance.now();
+    const [d,ir] = await Promise.all([
+      fetch(DATA+ (DATA.includes('?')?'&':'?')+ 'cb='+Date.now(),{cache:'no-store'}).then(r=>r.json()),
+      fetch(IR+ (IR.includes('?')?'&':'?')+ 'cb='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({events:[]}))
+    ]);
+    const t1=performance.now(); $('#latency').textContent = 'Net: '+Math.round(t1-t0)+'ms';
+    state.core=d.core||[]; state.swing=d.swing||[]; state.spec=d.spec||[]; state.cats=d.catalysts||{company:[],macro:[]}; state.ir=(ir.events||[]);
+    setStatus(); renderCore(); renderTactical(); renderTimeline(); verifyIR();
+  }
+
+  function verifyIR(){
+    const v=$('#verifyStatus'); const evs=state.ir||[]; if(!evs.length){ v.textContent='IR Verifier: No events loaded'; return; }
+    let verified=0, hints=0; const items=$$('#timeline .item');
+    evs.forEach(ev=>{
+      const ticker=(ev.ticker||'').toUpperCase(); const date=ev.date||'';
+      let found=null; items.forEach(it=>{ if((it.textContent||'').toUpperCase().includes(ticker)){ found=it; } });
+      if(found){
+        if(date && found.textContent.includes(date)){ badge(found,'✓ Verified','#22c55e'); verified++; }
+        else if(date){ badge(found,'⚠ '+date,'#f59e0b'); hints++; }
+      }
+    });
+    v.textContent = `IR Verifier: ${verified} verified, ${hints} update hint${hints!==1?'s':''}`;
+  }
+  function badge(el,txt,color){ const s=document.createElement('span'); s.className='tag'; s.textContent=txt; s.style.border='1px solid '+color; s.style.color=color; s.style.background='transparent'; s.style.marginLeft='6px'; el.appendChild(s); }
+
+  // events
+  $('#refresh').addEventListener('click', load);
+  $('#q').addEventListener('input', e=>searchAll(e.target.value));
+  $$('.chip').forEach(c=>c.addEventListener('click', ()=>applyFilter(c.dataset.filter)));
+
+  // init
+  load(); setInterval(load, 180000);
+})();
+</script>
+</body>
+</html>
